@@ -1,0 +1,5 @@
+*.exe
+*.log
+*.csv
+.vscode
+.ipynb_checkpoints
