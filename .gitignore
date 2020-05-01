@@ -3,3 +3,6 @@
 *.csv
 .vscode
 .ipynb_checkpoints
+nohup.out
+MTCD_RA_Time
+nMTCD_per_RAO
