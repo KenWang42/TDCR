@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
-
+import sys
+nMTCD = int(sys.argv[1])
 d2d_r = 100
-
-nMTCD = 1000
-MTCD_Position = pd.read_csv(f'../MTCD_Position/MTCD_position_{nMTCD}.csv', index_col=False)
+MTCD_Position = pd.read_csv(
+    f'../MTCD_Position/MTCD_position_{nMTCD}.csv', index_col=False)
 MTCDx = MTCD_Position.x
 MTCDy = MTCD_Position.y
 cluster = np.full(nMTCD, -1)
