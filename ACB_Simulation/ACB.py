@@ -2,9 +2,7 @@ import pandas as pd
 import numpy as np
 import random
 
-PACB = 2
-
-ACBP = 1/PACB
+ACBP = 0.5
 
 simRAO = 1000
 
@@ -51,7 +49,8 @@ for frame in range(simRAO):
             framePreambles[random.randrange(55)].append(device_id)
 
         else:
-            parameters['RA_init'] += random.randrange(Backoff)
+
+            RAtime.iloc[device_id]['RA_init'] += int((0.7+0.6*random.random())*40)
 
     for preamble in range(55):
         n = framePreambles[preamble]
@@ -72,11 +71,11 @@ for frame in range(simRAO):
                     nMTCD_fail += 1
                 else:
                     RAtime.iloc[device_id]['RA_init'] += random.randrange(
-                        Backoff)
+                        1, Backoff)
         if nMTCD_fail + nMTCD_success >= nMTCD:
             break
 
 nMTCD_fail = RAtime.loc[RAtime['RA_success'] == -1].shape[0]
 
-RAtime.to_csv(f'ACB_{PACB}\ACB_{PACB}_MTCD_RA_Time_{nMTCD}.csv', index=False)
-PreambleStatus.to_csv(f'ACB_{PACB}\ACB_{PACB}_Preamble_Status.csv', index=False)
+RAtime.to_csv(f'ACB_{ACBP}_MTCD_RA_Time_{nMTCD}.csv', index=False)
+PreambleStatus.to_csv(f'ACB_{ACBP}_Preamble_Status.csv', index=False)
