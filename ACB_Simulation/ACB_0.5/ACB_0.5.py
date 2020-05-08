@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
 import random
+import sys
 
 ACBP = 0.5
 
-simRAO = 1000
+simRAO = 2000
 
-nMTCD = 1000
+nMTCD = int(sys.argv[1])
 
 nMTCD_success = 0
 
@@ -23,7 +24,7 @@ maxTrans = 10
 # columns: 'nRA', 'empty', 'collided', 'success'
 
 PreambleStatus = pd.DataFrame(
-    np.zeros((1000, 4), dtype=int),
+    np.zeros((simRAO, 4), dtype=int),
     columns=['nRA', 'empty', 'collided', 'success'],
 )
 PreambleStatus.index.name = 'system frame'
@@ -77,5 +78,5 @@ for frame in range(simRAO):
 
 nMTCD_fail = RAtime.loc[RAtime['RA_success'] == -1].shape[0]
 
-RAtime.to_csv(f'ACB_{ACBP}_MTCD_RA_Time_{nMTCD}.csv', index=False)
-PreambleStatus.to_csv(f'ACB_{ACBP}_Preamble_Status.csv', index=False)
+RAtime.to_csv(f'result\ACB_{ACBP}_MTCD_RA_Time_{nMTCD}.csv', index=False)
+PreambleStatus.to_csv(f'result\ACB_{ACBP}_Preamble_Status.csv', index=False)
