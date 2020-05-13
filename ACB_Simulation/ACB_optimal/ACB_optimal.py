@@ -3,8 +3,6 @@ import numpy as np
 import random
 import sys
 
-ACBP = 0.5
-
 simRAO = 2000
 
 nMTCD = int(sys.argv[1])
@@ -33,13 +31,18 @@ PreambleStatus.index.name = 'system frame'
 # index: 'device_id'
 # columns: 'RA_init', 'RA_first', 'RA_success', 'RA_transmit'
 
-RAtime = pd.read_csv(f'MTCD_RA_Time/MTCD_RA_Time_{nMTCD}.csv', index_col=False)
+RAtime = pd.read_csv(f'MTCD_RA_Time_{nMTCD}.csv', index_col=False)
 
 
 for frame in range(simRAO):
     framePreambles = [[] for _ in range(55)]
     devices = RAtime.loc[(RAtime['RA_init'] == frame) &
                          (RAtime['RA_transmit'] <= maxTrans)]
+    n = len(devices)
+    if n >= 54:
+        ACBP = 54 / n
+    else:
+        ACBP = 1
     for device_id, parameters in devices.iterrows():
         q = random.random()
 
@@ -78,5 +81,5 @@ for frame in range(simRAO):
 
 nMTCD_fail = RAtime.loc[RAtime['RA_success'] == -1].shape[0]
 
-RAtime.to_csv(f'result/ACB_{ACBP}_MTCD_RA_Time_{nMTCD}.csv', index=False)
-PreambleStatus.to_csv(f'result/ACB_{ACBP}_Preamble_Status_{nMTCD}.csv', index=False)
+RAtime.to_csv(f'result/ACB_optimal_MTCD_RA_Time_{nMTCD}.csv', index=False)
+PreambleStatus.to_csv(f'result/ACB_optimal_Preamble_Status_{nMTCD}.csv', index=False)
