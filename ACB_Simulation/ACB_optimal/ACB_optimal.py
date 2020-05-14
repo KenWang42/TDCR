@@ -39,10 +39,7 @@ for frame in range(simRAO):
     devices = RAtime.loc[(RAtime['RA_init'] == frame) &
                          (RAtime['RA_transmit'] <= maxTrans)]
     n = len(devices)
-    if n >= 54:
-        ACBP = 54 / n
-    else:
-        ACBP = 1
+    ACBP = min(1, 54/n)
     for device_id, parameters in devices.iterrows():
         q = random.random()
 
