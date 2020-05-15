@@ -4,25 +4,22 @@ import numpy as np
 from scipy.stats import beta
 
 # The number of MTC Devices
-nMTCD = 3000
+nMTCD = 1000
 
 # time duration of simulation, 1 RAO = 10ms
 simRAO = 1000
-
-# Backoff time
-Backoff = 20
 
 # dataframe of result of RA Time related
 RA_Time = pd.DataFrame(
     columns=['RA_init', 'RA_first', 'RA_success', 'RA_transmit'])
 
 # number of RA in every system frame
-nMTCD_frame = np.zeros(1000)
+nMTCD_frame = np.zeros(simRAO)
 
 # generate cdf of beta distribution
 a = 3
 b = 4
-x = np.linspace(0, 1, 1000)
+x = np.linspace(0, 1, simRAO)
 beta_pdf = beta.pdf(x, a, b)
 
 # generate RA time in each MTCD by beta distribution

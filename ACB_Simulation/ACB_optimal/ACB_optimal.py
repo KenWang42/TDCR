@@ -36,11 +36,10 @@ RAtime = pd.read_csv(f'MTCD_RA_Time_{nMTCD}.csv', index_col=False)
 
 for frame in range(simRAO):
     framePreambles = [[] for _ in range(55)]
-    devices = RAtime.loc[(RAtime['RA_init'] == frame) &
-                         (RAtime['RA_transmit'] <= maxTrans)]
+    devices = RAtime.loc[(RAtime['RA_init'] == frame) & (RAtime['RA_transmit'] <= maxTrans)]
     n = len(devices)
-    ACBP = min(1, 54/n)
-    for device_id, parameters in devices.iterrows():
+    ACBP = min(1, 54 / n)
+    for device_id, parameters in devices.index:
         q = random.random()
 
         #  ACB blocking
@@ -51,7 +50,7 @@ for frame in range(simRAO):
 
         else:
 
-            RAtime.iloc[device_id]['RA_init'] += int((0.7+0.6*random.random())*40)
+            RAtime.iloc[device_id]['RA_init'] += int((0.7 + 0.6 * random.random())*40)
 
     for preamble in range(55):
         n = framePreambles[preamble]
@@ -78,5 +77,5 @@ for frame in range(simRAO):
 
 nMTCD_fail = RAtime.loc[RAtime['RA_success'] == -1].shape[0]
 
-RAtime.to_csv(f'result/ACB_optimal_MTCD_RA_Time_{nMTCD}.csv', index=False)
+RAtime.to_csv(f'result/ACB_optimal_Device_Result_{nMTCD}.csv', index=False)
 PreambleStatus.to_csv(f'result/ACB_optimal_Preamble_Status_{nMTCD}.csv', index=False)

@@ -75,5 +75,5 @@ for frame in range(simRAO):
 
 nMTCD_fail = RAtime.loc[RAtime['RA_success'] == -1].shape[0]
 
-RAtime.to_csv(f'result\ACB_{PACB}_MTCD_RA_Time_{nMTCD}.csv', index=False)
+RAtime.to_csv(f'result\ACB_{PACB}_Device_Result_{nMTCD}.csv', index=False)
 PreambleStatus.to_csv(f'result\ACB_{PACB}_Preamble_Status.csv', index=False)
