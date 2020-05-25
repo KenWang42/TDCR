@@ -10,7 +10,7 @@ path = os.path.abspath('.')
 
 simRAO = 1000
 
-nMTCD = 1000
+nMTCD = 10000
 
 nMTCD_success = 0  # total number of device that transmit success
 
@@ -146,7 +146,7 @@ BS_schedule
     Do not require initialize
     Index:
         system_frame
-    Columns 2:
+    Columns 1:
         class: Integer,
                the class can initiate RA procedure
 """

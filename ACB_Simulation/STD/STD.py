@@ -2,16 +2,19 @@ import pandas as pd
 import numpy as np
 import random
 import sys
+import time
 
-ACBP = 0.5
+start_time = time.time()
 
 simRAO = 2000
 
-nMTCD = int(sys.argv[1])
+nMTCD = 30000
 
 nMTCD_success = 0
 
 nMTCD_fail = 0
+
+ACBP = 1
 
 # Backoff Indicator = 20ms
 Backoff = 2
@@ -38,9 +41,9 @@ RAtime = pd.read_csv(f'MTCD_RA_Time_{nMTCD}.csv', index_col=False)
 
 for frame in range(simRAO):
     framePreambles = [[] for _ in range(55)]
-    devices = RAtime.loc[(RAtime['RA_init'] == frame) &
-                         (RAtime['RA_transmit'] <= maxTrans)]
-    for device_id, parameters in devices.iterrows():
+    devices = RAtime.loc[(RAtime['RA_init'] == frame) & (RAtime['RA_transmit'] <= maxTrans)]
+    n = len(devices)
+    for device_id in devices.index:
         q = random.random()
 
         #  ACB blocking
@@ -51,7 +54,7 @@ for frame in range(simRAO):
 
         else:
 
-            RAtime.iloc[device_id]['RA_init'] += int((0.7+0.6*random.random())*40)
+            RAtime.iloc[device_id]['RA_init'] += int((0.7 + 0.6 * random.random())*40)
 
     for preamble in range(55):
         n = framePreambles[preamble]
@@ -68,15 +71,17 @@ for frame in range(simRAO):
             for device_id in framePreambles[preamble]:
                 reTransmit = RAtime.iloc[device_id]['RA_transmit']
                 reTransmit += 1
-                if reTransmit > 10:
+                if reTransmit > maxTrans:
                     nMTCD_fail += 1
                 else:
                     RAtime.iloc[device_id]['RA_init'] += random.randrange(
                         1, Backoff)
-        if nMTCD_fail + nMTCD_success >= nMTCD:
-            break
+    if nMTCD_fail + nMTCD_success >= nMTCD:
+        break
+    print(f'Simulation {nMTCD} Time Spent: ', time.time() - start_time)
+    print(f'Simulation {nMTCD} Frame: {frame}')
 
-nMTCD_fail = RAtime.loc[RAtime['RA_success'] == -1].shape[0]
 
-RAtime.to_csv(f'result/ACB_{ACBP}_Device_Result_{nMTCD}.csv', index=False)
-PreambleStatus.to_csv(f'result/ACB_{ACBP}_Preamble_Status_{nMTCD}.csv', index=False)
+RAtime.to_csv(f'result/STD_Device_Result_{nMTCD}.csv', index=False)
+PreambleStatus.to_csv(f'result/STD_Preamble_Status_{nMTCD}.csv', index=False)
+print(f'{nMTCD} devices D2D simulation: ', time.time() - start_time)

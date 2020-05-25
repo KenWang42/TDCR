@@ -38,8 +38,8 @@ for frame in range(simRAO):
     framePreambles = [[] for _ in range(55)]
     devices = RAtime.loc[(RAtime['RA_init'] == frame) & (RAtime['RA_transmit'] <= maxTrans)]
     n = len(devices)
-    ACBP = min(1, 54 / n)
-    for device_id, parameters in devices.index:
+    ACBP = 54 / n if n > 54 else 1
+    for device_id in devices.index:
         q = random.random()
 
         #  ACB blocking
@@ -67,15 +67,13 @@ for frame in range(simRAO):
             for device_id in framePreambles[preamble]:
                 reTransmit = RAtime.iloc[device_id]['RA_transmit']
                 reTransmit += 1
-                if reTransmit > 10:
+                if reTransmit > maxTrans:
                     nMTCD_fail += 1
                 else:
                     RAtime.iloc[device_id]['RA_init'] += random.randrange(
                         1, Backoff)
         if nMTCD_fail + nMTCD_success >= nMTCD:
             break
-
-nMTCD_fail = RAtime.loc[RAtime['RA_success'] == -1].shape[0]
 
 RAtime.to_csv(f'result/ACB_optimal_Device_Result_{nMTCD}.csv', index=False)
 PreambleStatus.to_csv(f'result/ACB_optimal_Preamble_Status_{nMTCD}.csv', index=False)

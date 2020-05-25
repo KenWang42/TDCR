@@ -1,10 +1,16 @@
 import pandas as pd
 import numpy as np
 import random
+import os
+import time
 
-simRAO = 3000
+start_time = time.time()
 
-nMTCD = 30000
+path = os.path.abspath('.')
+
+simRAO = 1000
+
+nMTCD = 10000
 
 nMTCD_success = 0  # total number of device that transmit success
 
@@ -20,27 +26,8 @@ N_PRB_arrange = 20  # the number of arranged PRB
 
 N_preamble = 54  # Number of PRACH Preamble
 
-MTCD_data = pd.read_csv(f'MTCD_data_{nMTCD}.csv', index_col=False)
-
-"""
-Preamble_status
-    records the status of PRACH Preamble in every system frame (10ms)
-    Index:
-        system frame
-    Columns:
-        N_request: Integer,
-                   number of device that initiate RA request
-        empty:     Integer,
-                   number of preamble choose by no one
-        collided:  Integer,
-                   number of preamble choose by multiple devices
-        success:   Integer,
-                   number of preamble choose by exactly 1 device
-"""
-Preamble_status = pd.DataFrame(
-    columns=['nRA', 'empty', 'collided', 'success'],
-)
-Preamble_status.index.name = 'system frame'
+file_path = path + f'/MTCD_data_{nMTCD}.csv'
+MTCD_data = pd.read_csv(file_path, index_col=False)
 
 """
 RA_data
@@ -60,7 +47,7 @@ RA_data
         RA_ready:    Boolean,
                      whether the device can send RA request in the frame
 """
-RA_data = MTCD_data[['RA_init', 'RA_first', 'RA_success', 'RA_transmit']]
+RA_data = MTCD_data[['RA_init', 'RA_first', 'RA_success', 'RA_transmit', 'RA_ready']]
 
 """
 D2D_member
