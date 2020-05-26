@@ -8,7 +8,7 @@ start_time = time.time()
 
 simRAO = 2000
 
-nMTCD = 30000
+nMTCD = int(sys.argv[1])
 
 nMTCD_success = 0
 

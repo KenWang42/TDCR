@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import random
 import os
+import sys
 import time
 
 start_time = time.time()
@@ -10,7 +11,7 @@ path = os.path.abspath('.')
 
 simRAO = 2000
 
-nMTCD = 1000
+nMTCD = int(sys.argv[1])
 
 nMTCD_success = 0  # total number of device that transmit success
 
@@ -322,11 +323,10 @@ for frame in range(simRAO):
     devices_list = []  # list for RA compete
     groups_in_class = pd.DataFrame()
 
-    for class_ in class_list:
-        groups_in_class = groups_in_class.append(
-            D2D_group.loc[D2D_group['class'] == class_])
-
     if TDCR == 'N':  # Normal frame
+        for class_ in class_list:
+            groups_in_class = groups_in_class.append(
+                D2D_group.loc[D2D_group['class'] == class_])
 
         for header in groups_in_class['Header']:
             # Choose device to initiate RA procedure
@@ -335,6 +335,8 @@ for frame in range(simRAO):
             if not len(members_in_group):
                 continue
             chosen_device = members_in_group['transmit'].idxmax()
+            header_id = D2D_member.at[chosen_device, 'Header']
+            D2D_group.loc[D2D_group['Header'] == header_id, 'N_RA'] -= 1
             RA_data.at[chosen_device, 'RA_success'] = frame
             RA_data.at[chosen_device, 'RA_transmit'] += 1
             D2D_member.at[chosen_device, 'request'] = False
@@ -344,6 +346,9 @@ for frame in range(simRAO):
             nMTCD_success += 1
 
     elif TDCR == 'M':  # Middle loading TDCR frame
+        for class_ in class_list:
+            groups_in_class = groups_in_class.append(
+                D2D_group.loc[(D2D_group['class'] == class_) & (D2D_group['HL'])])
 
         for header in groups_in_class['Header']:
             # Choose 2 devices to initiate RA procedure
@@ -358,6 +363,9 @@ for frame in range(simRAO):
             devices_list.append(chosen_device_1)
 
     elif TDCR == 'H':  # Heavy loading TDCR frame
+        for class_ in class_list:
+            groups_in_class = groups_in_class.append(
+                D2D_group.loc[(D2D_group['class'] == class_) & (D2D_group['HL'])])
 
         for header in groups_in_class['Header']:
             # Choose 1 device to initiate RA procedure
@@ -372,7 +380,7 @@ for frame in range(simRAO):
     if len(devices_list) != 0:
         framePreambles = [[] for _ in range(N_preamble)]
         for device_id in devices_list:
-            framePreambles[random.randrange(55)].append(device_id)
+            framePreambles[random.randrange(N_preamble)].append(device_id)
         for preamble in range(N_preamble):
             devices = framePreambles[preamble]
             if len(devices) == 0:  # empty preamble
@@ -381,6 +389,8 @@ for frame in range(simRAO):
                 N_Success += 1
                 nMTCD_success += 1
                 device_id = framePreambles[preamble][0]
+                header_id = D2D_member.at[device_id, 'Header']
+                D2D_group.loc[D2D_group['Header'] == header_id, 'N_RA'] -= 1
                 RA_data.at[device_id, 'RA_success'] = frame
                 RA_data.at[device_id, 'RA_transmit'] += 1
                 D2D_member.at[device_id, 'request'] = False
@@ -397,7 +407,8 @@ for frame in range(simRAO):
 
     # update class information in BS
     for class_ in class_list:
-        N_HL = len(D2D_group.loc[(D2D_group['class'] == class_) & (D2D_group['HL'])])
+        N_HL = len(
+            D2D_group.loc[(D2D_group['class'] == class_) & (D2D_group['HL'])])
         if N_HL >= 38:
             Class_Status[class_] = 'H'
         elif N_HL >= 27:
@@ -408,11 +419,13 @@ for frame in range(simRAO):
     # update RA_result
     RA_result = RA_result.append(
         {'TDCR': TDCR, 'N_RA': N_RA,
-        'empty': N_preamble - (N_Success + N_Collided),
-        'collided': N_Collided, 'success': N_Success}, ignore_index=True)
+         'empty': N_preamble - (N_Success + N_Collided),
+         'collided': N_Collided, 'success': N_Success}, ignore_index=True)
 
     if nMTCD_success + nMTCD_fail >= nMTCD:
         break
+    print(f'Simulation {nMTCD} Frame: {frame}')
+    print(f'Simulation {nMTCD} Time Spent: ', time.time() - start_time)
 
 print(
     f'Simulation TDCR of {nMTCD} devices ends in: {frame}', time.time() - start_time)

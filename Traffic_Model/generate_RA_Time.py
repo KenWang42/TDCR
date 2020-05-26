@@ -20,13 +20,13 @@ nMTCD_frame = np.zeros(simRAO)
 a = 3
 b = 4
 x = np.linspace(0, 1, simRAO)
-beta_pdf = beta.pdf(x, a, b)
+beta_cdf = beta.cdf(x, a, b)
 
 # generate RA time in each MTCD by beta distribution
 for device in range(nMTCD):
     p = random.random()
     for frame in range(simRAO):
-        if p < beta_pdf[frame]:
+        if p < beta_cdf[frame]:
             RA_Time.loc[device] = [frame, frame, -1, 0]
             nMTCD_frame[frame] += 1
             break
