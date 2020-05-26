@@ -17,6 +17,8 @@ Backoff = 2
 # Maximum number of preamble transmission
 maxTrans = 10
 
+N_preamble = 54
+
 # PreambleStatus
 # index: 'preamble_id'
 # columns: 'nRA', 'empty', 'collided', 'success'
@@ -35,10 +37,10 @@ RAtime = pd.read_csv(f'MTCD_RA_Time_{nMTCD}.csv', index_col=False)
 
 
 for frame in range(simRAO):
-    framePreambles = [[] for _ in range(55)]
+    framePreambles = [[] for _ in range(N_preamble)]
     devices = RAtime.loc[(RAtime['RA_init'] == frame) & (RAtime['RA_transmit'] <= maxTrans)]
     n = len(devices)
-    ACBP = 54 / n if n > 54 else 1
+    ACBP = N_preamble / n if n > N_preamble else 1
     for device_id in devices.index:
         q = random.random()
 
@@ -46,13 +48,13 @@ for frame in range(simRAO):
 
         if q < ACBP:
             PreambleStatus.iloc[frame]['nRA'] += 1
-            framePreambles[random.randrange(55)].append(device_id)
+            framePreambles[random.randrange(N_preamble)].append(device_id)
 
         else:
 
             RAtime.iloc[device_id]['RA_init'] += int((0.7 + 0.6 * random.random())*40)
 
-    for preamble in range(55):
+    for preamble in range(N_preamble):
         n = framePreambles[preamble]
         if len(n) == 0:  # empty preamble
             PreambleStatus.iloc[frame]['empty'] += 1

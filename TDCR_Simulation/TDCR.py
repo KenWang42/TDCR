@@ -8,9 +8,9 @@ start_time = time.time()
 
 path = os.path.abspath('.')
 
-simRAO = 1000
+simRAO = 2000
 
-nMTCD = 10000
+nMTCD = 1000
 
 nMTCD_success = 0  # total number of device that transmit success
 
@@ -35,7 +35,7 @@ RA_data
     the parameters required in enB <-> device communication
     Index:
         device_id
-    Columns 4:
+    Columns 3:
         RA_init:     Integer,
                      next frame the device send RA request
         RA_first:    Integer,
@@ -44,10 +44,8 @@ RA_data
                      frame the device complete RA procedure
         RA_transmit: Integer,
                      number of the device trying to send RA request
-        RA_ready:    Boolean,
-                     whether the device can send RA request in the frame
 """
-RA_data = MTCD_data[['RA_init', 'RA_first', 'RA_success', 'RA_transmit', 'RA_ready']]
+RA_data = MTCD_data[['RA_init', 'RA_success', 'RA_transmit', 'RA_first']]
 
 """
 D2D_member
@@ -74,7 +72,8 @@ D2D_member
                   number of the Member trying to send D2D request
 """
 D2D_member = pd.DataFrame(
-    columns=['Header', 'Member', 'arrange', 'request', 'response', 'success', 'transmit'],
+    columns=['Header', 'Member', 'arrange',
+             'request', 'response', 'success', 'transmit'],
 )
 
 # assign group
@@ -118,16 +117,15 @@ D2D_group
                     the barring class of the beloneing D2D group
         N_member:   Integer,
                     the total number of device (member+header) in the group
+        arr_seq:    Integer,
+                    current arrange sequence
         N_RA:       Integer,
                     number of RA_request within the group
-        arrange:    Integer,
-                    current arrange sequence
-        HL:         Boolean,
-                    whether the group holds more than 38 RA request or not
+        HL:         Bollean,
+                    Whether the group is in HL or not
 """
 D2D_group = pd.DataFrame(
-    columns=['Header', 'class',
-             'N_member', 'N_RA', 'arrange', 'HL']
+    columns=['Header', 'class', 'N_member', 'arr_seq', 'N_RA', 'HL']
 )
 
 # initialize Header
@@ -135,7 +133,7 @@ D2D_group['Header'] = MTCD_data['clusters'].unique()
 
 # assign Class
 N_group = len(D2D_group)
-N_class = (N_group // N_preamble) + 1
+N_Class = (N_group // N_preamble) + 1
 seq = 0
 for group in range(N_group):
     D2D_group.at[group, 'class'] = group // N_preamble
@@ -143,13 +141,13 @@ for group in range(N_group):
 # initialize N_member
 D2D_group['N_member'] = D2D_member.groupby(['Header']).size().values
 
-# initialize RA_request
+# initialize current arrange sequence
+D2D_group['arr_seq'] = np.zeros(N_group, dtype=int)
+
+# initialize N_RA
 D2D_group['N_RA'] = np.zeros(N_group, dtype=int)
 
-# initialize current arrange sequence
-D2D_group['arrange'] = np.zeros(N_group, dtype=int)
-
-# initialize HL status
+# initialize N_RA
 D2D_group['HL'] = np.zeros(N_group, dtype=bool)
 
 """
@@ -160,142 +158,271 @@ BS_schedule
     Index:
         system_frame
     Columns 2:
-        class: Integer,
+        class: List[Integer],
                the class can initiate RA procedure
-        TDCR:  Integer,
-               the TDCR level of the frame
-               0: no TDCR frame
-               1: 1 TDCR frame in this period, 2 device per group initiate RA
-               2: 2 TDCR frame in this period, 1 device per group initiate RA
+        TDCR:  Char,
+               indicate the type of TDCR level
+               N:  normal loading, not a TDCR frame
+               M:  medium loading congestion resolving
+                   1 frame per period
+                   2 RA_request per group
+               H:  heavy loading congestion resolving
+                   2 frame per period
+                   1 RA_request per group
 """
 BS_schedule = pd.DataFrame(
     columns=['class', 'TDCR'],
 )
 
-# initialize class
-BS_schedule['class'] = np.zeros(simRAO, dtype=int)
-
-# initialize TDCR
-BS_schedule['TDCR'] = np.zeros(simRAO, dtype=int)
+"""
+D2D_result
+    records the numerical result of D2D sidelink
+    Index:
+        sequence of SC-Period
+    Columns 4:
+         frame:      Integer,
+                     the system frame when the SC-period-1 ends
+         N_request:  Integer,
+                     number of device send D2D_request to its header
+         N_response: Integer,
+                     number of D2D device that receive its Header response
+         N_HL:       Integer,
+                     number of Heavy Loading D2D_group
+"""
+D2D_result = pd.DataFrame(
+    columns=['frame', 'N_request', 'N_response', 'N_HL'],
+)
 
 """
-class_status
-    List[Integer]
-    records current status of each class stored in the BS
-    update after the class sends RA request
-    0: no TDCR frame
-    1: 1 TDCR frame in this period, 2 device per group initiate RA
-    2: 2 TDCR frame in this period, 1 device per group initiate RA
+RA_result
+    records the numerical result of Random Access
+    Index:
+        system frame
+    Columns 5:
+        TDCR:
+        N_RA:
+        empty:
+        collided:
+        success:
 """
-class_status = [0 for _ in range(N_class)]  # records in BS
 
-class_ptr = 0
+RA_result = pd.DataFrame(
+    columns=['N_RA', 'empty', 'collided', 'success', 'TDCR'],
+)
+
+#  records the current loading status of each classes
+Class_Status = ['N'] * N_Class
 
 D2D_period = 8  # 40 ms Member -> Header, 40ms Header -> Member
 
 SIB2_period = 16  # broadcast period of SIB2: 160ms
 
+N_Normal_frame_total = 0
+
 for frame in range(simRAO):
-
-    RA_data['RA_ready'] = np.zeros(nMTCD, dtype=bool)  # reset RA_ready
-
-    if frame % SIB2_period == 0:  # SIB2 broadcast
-        if frame + SIB2_period < simRAO:
-            schedule = BS_schedule.loc[frame:(frame + SIB2_period)]
-        if 1 in class_status:
-            BS_schedule.at[schedule.index[0], 'TDCR'] = 1
-        elif 2 in class_status:
-            BS_schedule.at[schedule.index[0], 'TDCR'] = 2
-            BS_schedule.at[schedule.index[1], 'TDCR'] = 2
-        for c in range(N_class):
-            # s: the frames for class c within next period
-            s = schedule.loc[(schedule['class'] == c)]
-            if class_status[c] == 1:
-                BS_schedule.at[s.index[0], 'TDCR'] = 1
-            elif class_status[c] == 2:
-                BS_schedule.at[s.index[0], 'TDCR'] = 2
-                BS_schedule.at[s.index[1], 'TDCR'] = 2
-
     # generate D2D request
+
     devices = RA_data.loc[(RA_data['RA_init'] == frame)
+                          & (RA_data['RA_success'] == -1)
                           & (RA_data['RA_transmit'] <= maxTrans)]
-    for device_id in devices.index:
-        D2D_member.at[device_id, 'request'] = True
-        D2D_member.at[device_id, 'response'] = False
 
-    if frame % (D2D_period) == 3:  # Members' request
-        members = D2D_member.loc[(D2D_member['request'])
-                                 & D2D_member['Member']]
-        headers = members['Header'].unique()
+    D2D_member.loc[devices.index, 'request'] = True
+    D2D_member.loc[devices.index, 'response'] = False
+
+    if frame % (SIB2_period) == 0:  # SIB2 update
+        N_Normal_frame = SIB2_period
+        M_Class = []
+        H_Class = []
+        for i in range(N_Class):  # check status of each Classes
+            if Class_Status[i] == 'H':
+                H_Class.append(i)
+            elif Class_Status[i] == 'M':
+                M_Class.append(i)
+        if H_Class:
+            for i in range(2):
+                BS_schedule = BS_schedule.append(
+                    {'class': H_Class, 'TDCR': 'H'}, ignore_index=True)
+            N_Normal_frame -= 2
+
+        if M_Class:
+            BS_schedule = BS_schedule.append(
+                {'class': M_Class, 'TDCR': 'M'}, ignore_index=True)
+            N_Normal_frame -= 1
+
+        for i in range(N_Normal_frame):
+            BS_schedule = BS_schedule.append(
+                {'class': [N_Normal_frame_total % N_Class], 'TDCR': 'N'}, ignore_index=True)
+            N_Normal_frame_total += 1
+
+    if frame % (D2D_period) == 4:  # D2D update
+        members_ = D2D_member.loc[D2D_member.request].copy()
+        N_D2D_request = len(members_)
+        N_D2D_response = N_HL = 0
+        headers = members_['Header'].unique()
         for header in headers:
-
+            # Members' request
             group_id = D2D_group.loc[D2D_group['Header'] == header].index[0]
 
-            cur_arrange = D2D_group.at[group_id, 'arrange']
+            cur_arrange = D2D_group.at[group_id, 'arr_seq']
 
-            group_members = members.loc[D2D_member['request'] == header]
+            group_members = members_.loc[(members_.Header == header)]
 
-            arr_members = group_members.loc[group_members['arrange']
-                                            == cur_arrange]
+            arr_members = group_members.loc[group_members.arrange ==
+                                            cur_arrange].index
 
-            non_arr_members = group_members.loc[group_members['arrange']
-                                                != cur_arrange]
+            non_arr_members = group_members.loc[group_members.index.difference(
+                arr_members)].index
 
             framePRB = [[] for _ in range(N_PRB)]
 
-            for arr_member in arr_members.index:
-                # compete arranged-PRB
+            for arr_member in arr_members:  # compete for arranged-PRB
                 framePRB[random.randrange(N_PRB_arrange)].append(arr_member)
                 D2D_member.at[arr_member, 'transmit'] += 1
 
-            for non_arr_member in non_arr_members.index:
-                # compete non-arranged-PRB
-                framePRB[random.randrange(N_PRB_arrange, N_PRB)].append(
-                    non_arr_member)
+            for non_arr_member in non_arr_members:
+                if non_arr_member == header:  # header itself
+                    D2D_member.at[header, 'response'] = True
+                else:  # compete for non-arranged-PRB
+                    framePRB[random.randrange(N_PRB_arrange, N_PRB)].append(
+                        non_arr_member)
                 D2D_member.at[non_arr_member, 'transmit'] += 1
 
             for PRB in range(N_PRB):
-                # check for the D2D request
-                members = framePRB[PRB]
-                if len(members) == 1:  # D2D request success
-                    D2D_group.at[group_id, 'N_RA'] += 1
-                    member_id = members[0]
+                PRB_members = framePRB[PRB]
+                if len(PRB_members) == 1:  # sending Header Response
+                    member_id = PRB_members[0]
                     D2D_member.at[member_id, 'request'] = False
                     D2D_member.at[member_id, 'response'] = True
                     D2D_member.at[member_id, 'success'] = frame
-            
-            if D2D_member.at[header, 'request']:
-                D2D_group.at[group_id, 'N_RA'] += 1
-                D2D_member.at[header, 'request'] = False
-                D2D_member.at[header, 'response'] = True
+                    D2D_group.at[group_id, 'N_RA'] += 1
+                    N_D2D_response += 1
 
+            # arrange PRB sequence
+            D2D_group.at[group_id, 'arr_seq'] += 1
+            max_arr = D2D_group.at[group_id, 'N_member'] // N_PRB_arrange
+            if D2D_group.at[group_id, 'arr_seq'] > max_arr:
+                D2D_group.at[group_id, 'arr_seq'] = 0
+
+            # update Group status
             if D2D_group.at[group_id, 'N_RA'] >= 38:
-                # more than 38 devices within the group initiates RA_request
                 D2D_group.at[group_id, 'HL'] = True
+                N_HL += 1
             else:
                 D2D_group.at[group_id, 'HL'] = False
 
-        # Header Response
+        D2D_result.loc[len(D2D_result)] = [
+            frame, N_D2D_request, N_D2D_response, N_HL]
 
-        class_ = BS_schedule.at[frame, 'class']
-        TDCR = BS_schedule.at[frame, 'TDCR']
-        class_groups = D2D_group.loc[D2D_group['class'] == class_]
+    # RA Procedure
+    TDCR = BS_schedule.at[frame, 'TDCR']
+    N_RA = 0
+    N_Success = 0
+    N_Collided = 0
+    class_list = BS_schedule.at[frame, 'class']
+    devices_list = []  # list for RA compete
+    groups_in_class = pd.DataFrame()
 
-        for header in class_groups['Header']:
+    for class_ in class_list:
+        groups_in_class = groups_in_class.append(
+            D2D_group.loc[D2D_group['class'] == class_])
+
+    if TDCR == 'N':  # Normal frame
+
+        for header in groups_in_class['Header']:
             # Choose device to initiate RA procedure
-            valid_group_members = D2D_member.loc[(D2D_member['Header'] == header) & (D2D_member['response'])]
-            if TDCR == 0 or TDCR == 2:  # 1 device with max transmit
-                device_id = valid_group_members['transmit'].idxmax()
-                RA_data.at[device_id, 'RA_ready'] = True
-            elif TDCR == 1:  # 2 device with max transmit
-                device_id_0 = valid_group_members['transmit'].idxmax()
-                RA_data.at[device_id_0, 'RA_ready'] = True
-                valid_group_members = valid_group_members.drop(device_id)
-                device_id_1 = valid_group_members['transmit'].idxmax()
-                RA_data.at[device_id_1, 'RA_ready'] = True
-        
-        # RA Procedure
+            members_in_group = D2D_member.loc[(
+                D2D_member.Header == header) & (D2D_member.response)]
+            if not len(members_in_group):
+                continue
+            chosen_device = members_in_group['transmit'].idxmax()
+            RA_data.at[chosen_device, 'RA_success'] = frame
+            RA_data.at[chosen_device, 'RA_transmit'] += 1
+            D2D_member.at[chosen_device, 'request'] = False
+            D2D_member.at[chosen_device, 'response'] = False
+            N_RA += 1
+            N_Success += 1
+            nMTCD_success += 1
 
-        RA_devices = RA_data.loc[RA_data['RA_ready']]
+    elif TDCR == 'M':  # Middle loading TDCR frame
 
-        if TDCR == 0:  # assign every device with 1 preambles, no collision
+        for header in groups_in_class['Header']:
+            # Choose 2 devices to initiate RA procedure
+            members_in_group = D2D_member.loc[(
+                D2D_member.Header == header) & (D2D_member.response)]
+            if not len(members_in_group):
+                continue
+            chosen_device_0 = members_in_group['transmit'].idxmax()
+            devices_list.append(chosen_device_0)
+            members_in_group = members_in_group.drop(chosen_device_0)
+            chosen_device_1 = members_in_group['transmit'].idxmax()
+            devices_list.append(chosen_device_1)
+
+    elif TDCR == 'H':  # Heavy loading TDCR frame
+
+        for header in groups_in_class['Header']:
+            # Choose 1 device to initiate RA procedure
+            members_in_group = D2D_member.loc[(
+                D2D_member.Header == header) & (D2D_member.response)]
+            if not len(members_in_group):
+                continue
+            chosen_device_0 = members_in_group['transmit'].idxmax()
+            devices_list.append(chosen_device_0)
+
+    # Random Access compete
+    if len(devices_list) != 0:
+        framePreambles = [[] for _ in range(N_preamble)]
+        for device_id in devices_list:
+            framePreambles[random.randrange(55)].append(device_id)
+        for preamble in range(N_preamble):
+            devices = framePreambles[preamble]
+            if len(devices) == 0:  # empty preamble
+                continue
+            if len(devices) == 1:  # success preamble
+                N_Success += 1
+                nMTCD_success += 1
+                device_id = framePreambles[preamble][0]
+                RA_data.at[device_id, 'RA_success'] = frame
+                RA_data.at[device_id, 'RA_transmit'] += 1
+                D2D_member.at[device_id, 'request'] = False
+                D2D_member.at[device_id, 'response'] = False
+
+            else:  # collided preamble
+                N_Collided += 1
+                RA_data.at[device_id, 'RA_transmit'] += 1
+                if RA_data.at[device_id, 'RA_transmit'] >= maxTrans:
+                    nMTCD_fail += 1
+                    D2D_member.at[device_id, 'request'] = False
+                    D2D_member.at[device_id, 'response'] = False
+        N_RA = len(devices_list)
+
+    # update class information in BS
+    for class_ in class_list:
+        N_HL = len(D2D_group.loc[(D2D_group['class'] == class_) & (D2D_group['HL'])])
+        if N_HL >= 38:
+            Class_Status[class_] = 'H'
+        elif N_HL >= 27:
+            Class_Status[class_] = 'M'
+        else:
+            Class_Status[class_] = 'N'
+
+    # update RA_result
+    RA_result = RA_result.append(
+        {'TDCR': TDCR, 'N_RA': N_RA,
+        'empty': N_preamble - (N_Success + N_Collided),
+        'collided': N_Collided, 'success': N_Success}, ignore_index=True)
+
+    if nMTCD_success + nMTCD_fail >= nMTCD:
+        break
+
+print(
+    f'Simulation TDCR of {nMTCD} devices ends in: {frame}', time.time() - start_time)
+
+D2D_data = D2D_member[['Header', 'success', 'transmit']]
+D2D_data.columns = ['Header', 'D2D_success', 'D2D_transmit']
+
+Device_result = pd.concat([D2D_data, RA_data], axis=1, sort=False)
+Device_result.to_csv(f'result/TDCR_Device_Result_{nMTCD}.csv', index=False)
+
+D2D_result.to_csv(f'result/TDCR_D2D_Result_{nMTCD}.csv', index=False)
+
+RA_result.to_csv(f'result/TDCR_RA_Result_{nMTCD}.csv', index=False)
