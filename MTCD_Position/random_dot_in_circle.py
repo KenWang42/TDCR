@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import sys
 
 # generate random angle
 # then project the angle with random length from 0 to radius
@@ -23,7 +24,7 @@ class Circle:
 origin = Point(0, 0)
 radius = 1000
 circle = Circle(origin, radius)
-N_MTCD = 5000
+N_MTCD = int(sys.argv[1])
 
 df = pd.DataFrame(columns=['x', 'y'])
 
@@ -33,6 +34,7 @@ for i in range(0, N_MTCD):
     x = round(np.cos(p) * r, 3)
     y = round(np.sin(p) * r, 3)
     df = df.append({'x': x, 'y': y}, ignore_index=True)
+    print(i)
 
 df.index.name = 'MTCD_id'
 df.to_csv(f'MTCD_position_{N_MTCD}.csv')

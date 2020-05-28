@@ -2,9 +2,10 @@ import random
 import pandas as pd
 import numpy as np
 from scipy.stats import beta
+import sys
 
 # The number of MTC Devices
-nMTCD = 1000
+nMTCD = int(sys.argv[1])
 
 # time duration of simulation, 1 RAO = 10ms
 simRAO = 1000
@@ -30,6 +31,7 @@ for device in range(nMTCD):
             RA_Time.loc[device] = [frame, frame, -1, 0]
             nMTCD_frame[frame] += 1
             break
+    print(f'current progress: {device}')
 
 RA_Time.to_csv(f'MTCD_RA_Time/MTCD_RA_Time_{nMTCD}.csv', index=False)
 pd.DataFrame(nMTCD_frame).to_csv(f'nMTCD_per_RAO/nMTCD_per_RAO_{nMTCD}.csv', index=False)

@@ -1,10 +1,13 @@
 import pandas as pd
 import numpy as np
 import sys
+import time
+
+start_time = time.time()
+
 nMTCD = int(sys.argv[1])
 d2d_r = 100
-MTCD_Position = pd.read_csv(
-    f'../MTCD_Position/MTCD_position_{nMTCD}.csv', index_col=False)
+MTCD_Position = pd.read_csv(f'/home/kangyu/TDCR/MTCD_Position/MTCD_position_{nMTCD}.csv', index_col=False)
 MTCDx = MTCD_Position.x
 MTCDy = MTCD_Position.y
 cluster = np.full(nMTCD, -1)
@@ -19,6 +22,7 @@ for a in range(nMTCD):
                 if dist <= d2d_r**2 and dist <= shortest[b]:
                     shortest[b] = dist
                     cluster[b] = a
+    print(a)
 
 
 MTCD_group = MTCD_Position.assign(clusters=cluster)

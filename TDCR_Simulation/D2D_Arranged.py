@@ -30,6 +30,8 @@ N_preamble = 54  # Number of PRACH Preamble
 file_path = path + f'/MTCD_data_{nMTCD}.csv'
 MTCD_data = pd.read_csv(file_path, index_col=False)
 
+TDCR_Threshold = 30000
+
 """
 RA_data
     records RA parameter and simulation result of every device
@@ -239,13 +241,13 @@ for frame in range(simRAO):
                 H_Class.append(i)
             elif Class_Status[i] == 'M':
                 M_Class.append(i)
-        if H_Class:
+        if len(H_Class) != 0:
             for i in range(2):
                 BS_schedule = BS_schedule.append(
                     {'class': H_Class, 'TDCR': 'H'}, ignore_index=True)
             N_Normal_frame -= 2
 
-        if M_Class:
+        if len(M_Class) != 0:
             BS_schedule = BS_schedule.append(
                 {'class': M_Class, 'TDCR': 'M'}, ignore_index=True)
             N_Normal_frame -= 1
@@ -305,7 +307,7 @@ for frame in range(simRAO):
                 D2D_group.at[group_id, 'arr_seq'] = 0
 
             # update Group status
-            if D2D_group.at[group_id, 'N_RA'] >= 38:
+            if D2D_group.at[group_id, 'N_RA'] >= TDCR_Threshold:
                 D2D_group.at[group_id, 'HL'] = True
                 N_HL += 1
             else:
@@ -434,8 +436,8 @@ D2D_data = D2D_member[['Header', 'success', 'transmit']]
 D2D_data.columns = ['Header', 'D2D_success', 'D2D_transmit']
 
 Device_result = pd.concat([D2D_data, RA_data], axis=1, sort=False)
-Device_result.to_csv(f'result/TDCR_Device_Result_{nMTCD}.csv', index=False)
+Device_result.to_csv(f'result/D2D_Arranged_Device_Result_{nMTCD}.csv', index=False)
 
-D2D_result.to_csv(f'result/TDCR_D2D_Result_{nMTCD}.csv', index=False)
+D2D_result.to_csv(f'result/D2D_Arranged_D2D_Result_{nMTCD}.csv', index=False)
 
-RA_result.to_csv(f'result/TDCR_RA_Result_{nMTCD}.csv', index=False)
+RA_result.to_csv(f'result/D2D_Arranged_RA_Result_{nMTCD}.csv', index=False)
