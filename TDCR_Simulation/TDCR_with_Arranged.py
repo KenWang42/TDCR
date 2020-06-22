@@ -9,7 +9,7 @@ start_time = time.time()
 
 path = os.path.abspath('.')
 
-simRAO = 2000
+simRAO = 3000
 
 nMTCD = int(sys.argv[1])
 
@@ -30,7 +30,7 @@ N_preamble = 54  # Number of PRACH Preamble
 file_path = path + f'/MTCD_data_{nMTCD}.csv'
 MTCD_data = pd.read_csv(file_path, index_col=False)
 
-TDCR_Threshold = 20
+TDCR_Threshold = 25
 
 """
 RA_data

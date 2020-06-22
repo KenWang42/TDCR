@@ -2,8 +2,11 @@ import pandas as pd
 import numpy as np
 import random
 import sys
+import time
 
-simRAO = 2000
+start_time = time.time()
+
+simRAO = 3000
 
 nMTCD = int(sys.argv[1])
 
@@ -76,6 +79,7 @@ for frame in range(simRAO):
                         1, Backoff)
         if nMTCD_fail + nMTCD_success >= nMTCD:
             break
+    print(f'ACB simulation {frame} {time.time() - start_time:.3f}')
 
 RAtime.to_csv(f'result/ACB_optimal_Device_Result_{nMTCD}.csv', index=False)
 PreambleStatus.to_csv(f'result/ACB_optimal_Preamble_Status_{nMTCD}.csv', index=False)

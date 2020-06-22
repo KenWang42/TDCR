@@ -9,7 +9,7 @@ start_time = time.time()
 
 path = os.path.abspath('.')
 
-simRAO = 2000
+simRAO = 3000
 
 nMTCD = int(sys.argv[1])
 
@@ -25,7 +25,7 @@ N_PRB = 25  # Number of Sidelink Physical Resource Block
 
 N_PRB_arrange = N_PRB  # the number of arranged PRB
 
-TDCR_Threshold = 25
+TDCR_Threshold = int(sys.argv[2])
 
 N_preamble = 54  # Number of PRACH Preamble
 
@@ -443,8 +443,8 @@ D2D_data = D2D_member[['Header', 'success', 'transmit']]
 D2D_data.columns = ['Header', 'D2D_success', 'D2D_transmit']
 
 Device_result = pd.concat([D2D_data, RA_data], axis=1, sort=False)
-Device_result.to_csv(f'result/TDCR_only_Device_Result_{nMTCD}.csv', index=False)
+Device_result.to_csv(f'result/TDCR_only_{TDCR_Threshold}_Device_Result_{nMTCD}.csv', index=False)
 
-D2D_result.to_csv(f'result/TDCR_only_D2D_Result_{nMTCD}.csv', index=False)
+D2D_result.to_csv(f'result/TDCR_only_{TDCR_Threshold}_D2D_Result_{nMTCD}.csv', index=False)
 
-RA_result.to_csv(f'result/TDCR_only_RA_Result_{nMTCD}.csv', index=False)
+RA_result.to_csv(f'result/TDCR_only_{TDCR_Threshold}_RA_Result_{nMTCD}.csv', index=False)

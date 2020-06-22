@@ -22,8 +22,7 @@ for a in range(nMTCD):
                 if dist <= d2d_r**2 and dist <= shortest[b]:
                     shortest[b] = dist
                     cluster[b] = a
-    print(a)
-
+    print(f'current point {a}, time spent: {time.time() - start_time:.3f}')
 
 MTCD_group = MTCD_Position.assign(clusters=cluster)
 MTCD_group.x = round(MTCD_group.x, 3)

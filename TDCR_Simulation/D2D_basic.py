@@ -9,7 +9,7 @@ start_time = time.time()
 
 path = os.path.abspath('.')
 
-simRAO = 2000
+simRAO = 3000
 
 nMTCD = int(sys.argv[1])
 
